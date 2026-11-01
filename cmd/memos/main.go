@@ -319,7 +319,17 @@ func (e exitCodeError) Error() string {
 // reading without a migration.
 const legacySecretsDir = "/etc/secrets"
 
-var legacySecretsFilenameMatcher = regexp.MustCompile(`^memos-(?:idp|instance-setting)-[a-z0-9]+(?:-[a-z0-9]+)*\.json$`)
+var legacyInstanceSettingFilenameMatcher = regexp.MustCompile(`^memos-instance-setting-[a-z0-9]+(?:-[a-z0-9]+)*\.json$`)
+
+// isLegacySecretsFilename reports whether the v0.31 loader read name. It took
+// any memos-idp-*.json, warning only about names that were not lowercase kebab
+// case, but required kebab case for instance settings.
+func isLegacySecretsFilename(name string) bool {
+	if strings.HasPrefix(name, "memos-idp-") && strings.HasSuffix(name, ".json") {
+		return true
+	}
+	return legacyInstanceSettingFilenameMatcher.MatchString(name)
+}
 
 // legacySecretsFiles lists the v0.31 deployment configuration files still
 // present in dir, so startup can say that nothing reads them: an operator who
@@ -333,7 +343,7 @@ func legacySecretsFiles(dir string) []string {
 	}
 	var files []string
 	for _, entry := range entries {
-		if !entry.IsDir() && legacySecretsFilenameMatcher.MatchString(entry.Name()) {
+		if !entry.IsDir() && isLegacySecretsFilename(entry.Name()) {
 			files = append(files, filepath.Join(dir, entry.Name()))
 		}
 	}
